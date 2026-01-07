@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { Package2, Warehouse } from 'lucide-react';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner";
+import { Package2, Warehouse } from "lucide-react";
+import logo from "../../public/logo.png";
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -22,13 +29,13 @@ const Login: React.FC = () => {
     try {
       const success = await login(username, password);
       if (success) {
-        toast.success('Login successful');
-        navigate('/dashboard');
+        toast.success("Login successful");
+        navigate("/dashboard");
       } else {
-        toast.error('Invalid username or password');
+        toast.error("Invalid username or password");
       }
     } catch (error) {
-      toast.error('An error occurred during login');
+      toast.error("An error occurred during login");
     } finally {
       setIsLoading(false);
     }
@@ -38,17 +45,24 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Warehouse className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center w-56 h-56 rounded-full bg-primary mb-4">
+            {/* <Warehouse className="w-8 h-8 text-primary" /> */}
+            <img src={logo} alt="Logo" className="w-full h-full" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Inventory Management</h1>
-          <p className="text-muted-foreground mt-1">Sistem Monitoring Persediaan Barang</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            PT Samudra Marine Indonesia
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Sistem Monitoring Persediaan Barang
+          </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
-            <CardDescription>Enter your credentials to access the system</CardDescription>
+            <CardDescription>
+              Enter your credentials to access the system
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -75,7 +89,7 @@ const Login: React.FC = () => {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 

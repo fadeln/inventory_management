@@ -93,6 +93,15 @@ const IncomingGoods: React.FC = () => {
     items: [] as TransactionItem[],
   });
 
+  const [filters, setFilters] = useState({
+    supplierId: "ALL",
+    status: "ALL",
+    date: "", // YYYY-MM-DD
+    month: "", // YYYY-MM
+  });
+
+  
+
   const [newItem, setNewItem] = useState({ itemId: "", quantity: 0 });
 
   // Utility function to safely format dates
@@ -113,12 +122,32 @@ const IncomingGoods: React.FC = () => {
       return new Date().toISOString().split("T")[0];
     }
   };
+  const filteredTransactions = transactions.filter((t) => {
+    // Text search
+    const matchSearch = t.transactionNumber
+      .toLowerCase()
+      .includes(search.toLowerCase());
 
-  const filteredTransactions = transactions.filter(
-    (t) => t.transactionNumber.toLowerCase().includes(search.toLowerCase())
-    //  ||
-    //   t.referenceNumber.toLowerCase().includes(search.toLowerCase())
-  );
+    // Supplier filter
+    const matchSupplier =
+      filters.supplierId === "ALL" || t.supplierId === filters.supplierId;
+
+    // Status filter
+    const matchStatus = filters.status === "ALL" || t.status === filters.status;
+
+    // Date filter (exact date)
+    const matchDate =
+      !filters.date || extractDateFromISO(t.receivedAt) === filters.date;
+
+    // Month filter (YYYY-MM)
+    const matchMonth =
+      !filters.month ||
+      extractDateFromISO(t.receivedAt).startsWith(filters.month);
+
+    return (
+      matchSearch && matchSupplier && matchStatus && matchDate && matchMonth
+    );
+  });
 
   const getSupplierName = (supplierId: string) => {
     return suppliers.find((s) => s.id === supplierId)?.name || "Unknown";
@@ -312,12 +341,14 @@ const IncomingGoods: React.FC = () => {
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(33, 33, 33);
-      doc.text("NAMA PT/PERUSAHAAN DISINI", 105, 20, { align: "center" });
+      // doc.text("NAMA PT/PERUSAHAAN DISINI", 105, 20, { align: "center" });
+      doc.text("PT SAMUDRA MARINE INDONESIA", 105, 20, { align: "center" });
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100, 100, 100);
-      doc.text("ALAMAT PT/PERUSAHAAN DISINI", 105, 28, { align: "center" });
+      // doc.text("ALAMAT PT/PERUSAHAAN DISINI", 105, 28, { align: "center" });
+      doc.text("Kp. Lumalang, Desa Bojonegara, Kec. Bojonegara, Kab. Serang, Banten, Indonesia, 42454", 105, 28, { align: "center" });
 
       doc.setLineWidth(0.5);
       doc.line(20, 35, 190, 35);
@@ -716,16 +747,100 @@ const IncomingGoods: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            {/* Text Search */}
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search transaction number..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Filter by Supplier */}
+            <Select
+              value={filters.supplierId}
+              onValueChange={(v) => setFilters({ ...filters, supplierId: v })}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Supplier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Suppliers</SelectItem>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Filter by Status */}
+            <Select
+              value={filters.status}
+              onValueChange={(v) => setFilters({ ...filters, status: v })}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Filter by Specific Date */}
             <Input
-              placeholder="Search transactions..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              type="date"
+              value={filters.date}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  date: e.target.value,
+                  month: "",
+                })
+              }
+              className="w-[160px]"
             />
+
+            {/* Filter by Month */}
+            <Input
+              type="month"
+              value={filters.month}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  month: e.target.value,
+                  date: "",
+                })
+              }
+              className="w-[160px]"
+            />
+
+               <Button
+            variant="outline"
+            onClick={() => {
+              setSearch("");
+              setFilters({
+                supplierId: "ALL",
+                status: "ALL",
+                date: "",
+                month: "",
+              });
+            }}
+          >
+            Clear Filters
+          </Button>
           </div>
+
+       
         </CardHeader>
+
         <CardContent>
           {isLoading ? (
             <p className="text-center py-8 text-muted-foreground">Loading...</p>
@@ -966,30 +1081,32 @@ const IncomingGoods: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Transaction Details</DialogTitle>
           </DialogHeader>
-          {viewingTransaction && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">
-                    Transaction Number
-                  </Label>
-                  <p className="font-medium">
-                    {viewingTransaction.transactionNumber}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Status</Label>
-                  <div className="mt-1">
-                    <StatusBadge status={viewingTransaction.status} />
+          {viewingTransaction &&
+            (console.log("asd", viewingTransaction.createdBy.name),
+            (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">
+                      Transaction Number
+                    </Label>
+                    <p className="font-medium">
+                      {viewingTransaction.transactionNumber}
+                    </p>
                   </div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Supplier</Label>
-                  <p className="font-medium">
-                    {getSupplierName(viewingTransaction.supplierId)}
-                  </p>
-                </div>
-                {/* <div>
+                  <div>
+                    <Label className="text-muted-foreground">Status</Label>
+                    <div className="mt-1">
+                      <StatusBadge status={viewingTransaction.status} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Supplier</Label>
+                    <p className="font-medium">
+                      {getSupplierName(viewingTransaction.supplierId)}
+                    </p>
+                  </div>
+                  {/* <div>
                   <Label className="text-muted-foreground">
                     Reference Number
                   </Label>
@@ -997,97 +1114,99 @@ const IncomingGoods: React.FC = () => {
                     {viewingTransaction.referenceNumber}
                   </p>
                 </div> */}
-                <div>
-                  <Label className="text-muted-foreground">Received Date</Label>
-                  <p className="font-medium">
-                    {safeFormatDate(viewingTransaction.receivedAt)}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Created By</Label>
-                  <p className="font-medium">
-                    {getUserName(viewingTransaction.createdBy)}
-                  </p>
-                </div>
-              </div>
-
-              {viewingTransaction.notes && (
-                <div>
-                  <Label className="text-muted-foreground">Notes</Label>
-                  <p>{viewingTransaction.notes}</p>
-                </div>
-              )}
-
-              <div>
-                <Label className="text-muted-foreground">Items</Label>
-                <div className="border rounded-lg mt-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="w-24">Quantity</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {viewingTransaction.items.map((item) => (
-                        <TableRow key={item.itemId}>
-                          <TableCell>{getItemName(item.itemId)}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => generatePDF(viewingTransaction)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate PDF
-                </Button>
-              </div>
-
-              {viewingTransaction.status === "APPROVED" &&
-                viewingTransaction.signatureImage &&
-                (console.log("namaku", viewingTransaction),
-                (
                   <div>
                     <Label className="text-muted-foreground">
-                      Approval Signature
+                      Received Date
                     </Label>
-                    <div className="border rounded-lg p-2 mt-2 bg-card">
-                      <img
-                        src={viewingTransaction.signatureImage}
-                        alt="Signature"
-                        className="max-w-full h-auto"
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Approved by{" "}
-                      {viewingTransaction.approvedBy?.name || "Unknown"} on{" "}
-                      {safeFormatDate(
-                        viewingTransaction.approvedAt,
-                        "dd/MM/yyyy HH:mm"
-                      )}
+                    <p className="font-medium">
+                      {safeFormatDate(viewingTransaction.receivedAt)}
                     </p>
                   </div>
-                ))}
-
-              {viewingTransaction.status === "REJECTED" && (
-                <div>
-                  <Label className="text-muted-foreground">
-                    Rejection Reason
-                  </Label>
-                  <p className="text-destructive">
-                    {viewingTransaction.rejectionReason}
-                  </p>
+                  <div>
+                    <Label className="text-muted-foreground">Created By</Label>
+                    <p className="font-medium">
+                      {viewingTransaction.createdBy.name}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                {viewingTransaction.notes && (
+                  <div>
+                    <Label className="text-muted-foreground">Notes</Label>
+                    <p>{viewingTransaction.notes}</p>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-muted-foreground">Items</Label>
+                  <div className="border rounded-lg mt-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead className="w-24">Quantity</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewingTransaction.items.map((item) => (
+                          <TableRow key={item.itemId}>
+                            <TableCell>{getItemName(item.itemId)}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => generatePDF(viewingTransaction)}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Generate PDF
+                  </Button>
+                </div>
+
+                {viewingTransaction.status === "APPROVED" &&
+                  viewingTransaction.signatureImage &&
+                  (console.log("namaku", viewingTransaction),
+                  (
+                    <div>
+                      <Label className="text-muted-foreground">
+                        Approval Signature
+                      </Label>
+                      <div className="border rounded-lg p-2 mt-2 bg-card">
+                        <img
+                          src={viewingTransaction.signatureImage}
+                          alt="Signature"
+                          className="max-w-full h-auto"
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Approved by{" "}
+                        {viewingTransaction.approvedBy?.name || "Unknown"} on{" "}
+                        {safeFormatDate(
+                          viewingTransaction.approvedAt,
+                          "dd/MM/yyyy HH:mm"
+                        )}
+                      </p>
+                    </div>
+                  ))}
+
+                {viewingTransaction.status === "REJECTED" && (
+                  <div>
+                    <Label className="text-muted-foreground">
+                      Rejection Reason
+                    </Label>
+                    <p className="text-destructive">
+                      {viewingTransaction.rejectionReason}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
         </DialogContent>
       </Dialog>
 

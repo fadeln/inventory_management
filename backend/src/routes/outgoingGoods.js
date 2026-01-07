@@ -25,10 +25,12 @@ router.get("/", authenticate, async (req, res) => {
   try {
     const outgoingGoods = await prisma.outgoingGoods.findMany({
       include: {
-        approvedBy:{
-          select:{
-            id: true, name: true, username: true
-          }
+        approvedBy: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
         },
         issuedBy: { select: { id: true, name: true, username: true } },
         items: {
@@ -68,7 +70,12 @@ router.post(
     try {
       const { destination, recipientName, notes, items, issuedById } = req.body;
 
-      if (!destination || !recipientName || !Array.isArray(items) || items.length === 0) {
+      if (
+        !destination ||
+        !recipientName ||
+        !Array.isArray(items) ||
+        items.length === 0
+      ) {
         return res.status(400).json({ error: "Invalid request data" });
       }
 
@@ -188,7 +195,7 @@ router.put(
 router.post(
   "/:id/submit",
   authenticate,
-  authorize("admin" , "warehouse_staff"),
+  authorize("admin", "warehouse_staff"),
   async (req, res) => {
     try {
       await prisma.outgoingGoods.update({

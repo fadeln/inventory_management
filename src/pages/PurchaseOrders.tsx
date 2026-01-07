@@ -92,13 +92,35 @@ const PurchaseOrders: React.FC = () => {
     items: [] as TransactionItem[],
   });
 
+  const [filters, setFilters] = useState({
+    supplierId: "ALL",
+    status: "ALL",
+    date: "",
+    month: "",
+  });
+
   const [newItem, setNewItem] = useState({ itemId: "", quantity: 0 });
 
-  const filteredOrders = orders.filter(
-    (o) => o.orderNumber.toLowerCase().includes(search.toLowerCase())
+  const filteredOrders = orders.filter((o) => {
+    const matchSearch = o.orderNumber
+      .toLowerCase()
+      .includes(search.toLowerCase());
 
-    // console.log(o)
-  );
+    const matchSupplier =
+      filters.supplierId === "ALL" || o.supplierId === filters.supplierId;
+
+    const matchStatus = filters.status === "ALL" || o.status === filters.status;
+
+    const orderDate = format(new Date(o.expectedDate), "yyyy-MM-dd");
+
+    const matchDate = !filters.date || orderDate === filters.date;
+
+    const matchMonth = !filters.month || orderDate.startsWith(filters.month);
+
+    return (
+      matchSearch && matchSupplier && matchStatus && matchDate && matchMonth
+    );
+  });
 
   const getSupplierName = (supplierId: string) => {
     return suppliers.find((s) => s.id === supplierId)?.name || "Unknown";
@@ -284,12 +306,19 @@ const PurchaseOrders: React.FC = () => {
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(33, 33, 33);
-      doc.text("NAMA PT/PERUSAHAAN DISINI", 105, 20, { align: "center" });
+      // doc.text("NAMA PT/PERUSAHAAN DISINI", 105, 20, { align: "center" });
+      doc.text("PT SAMUDRA MARINE INDONESIA", 105, 20, { align: "center" });
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100, 100, 100);
-      doc.text("ALAMAT PT/PERUSAHAAN DISINI", 105, 28, { align: "center" });
+      // doc.text("ALAMAT PT/PERUSAHAAN DISINI", 105, 28, { align: "center" });
+      doc.text(
+        "Kp. Lumalang, Desa Bojonegara, Kec. Bojonegara, Kab. Serang, Banten, Indonesia, 42454",
+        105,
+        28,
+        { align: "center" }
+      );
 
       doc.setLineWidth(0.5);
       doc.line(20, 35, 190, 35);
@@ -701,16 +730,99 @@ const PurchaseOrders: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+            {/* Search */}
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search PO number..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Supplier */}
+            <Select
+              value={filters.supplierId}
+              onValueChange={(v) => setFilters({ ...filters, supplierId: v })}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Supplier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Suppliers</SelectItem>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status */}
+            <Select
+              value={filters.status}
+              onValueChange={(v) => setFilters({ ...filters, status: v })}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date */}
             <Input
-              placeholder="Search orders..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              type="date"
+              value={filters.date}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  date: e.target.value,
+                  month: "",
+                })
+              }
+              className="w-[160px]"
             />
+
+            {/* Month */}
+            <Input
+              type="month"
+              value={filters.month}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  month: e.target.value,
+                  date: "",
+                })
+              }
+              className="w-[160px]"
+            />
+
+            {/* Clear */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setFilters({
+                  supplierId: "ALL",
+                  status: "ALL",
+                  date: "",
+                  month: "",
+                });
+              }}
+            >
+              Clear
+            </Button>
           </div>
         </CardHeader>
+
         <CardContent>
           {isLoading ? (
             <p className="text-center py-8 text-muted-foreground">Loading...</p>

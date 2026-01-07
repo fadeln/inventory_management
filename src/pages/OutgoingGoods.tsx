@@ -61,6 +61,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { StatusBadge } from "@/components/StatusBadge";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // Simplified type based on your schema
 interface TransactionItem {
@@ -108,11 +110,42 @@ const OutgoingGoods: React.FC = () => {
     items: [] as TransactionItem[],
   });
 
+  const [filters, setFilters] = useState({
+    destination: "",
+    recipient: "",
+    status: "ALL",
+    date: "", // YYYY-MM-DD
+  });
+
   const [newItem, setNewItem] = useState({ itemId: "", quantity: 0 });
 
-  const filteredTransactions = transactions.filter((t) =>
-    t.transactionNumber.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredTransactions = transactions.filter((t) => {
+    const matchSearch = t.transactionNumber
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    const matchDestination =
+      !filters.destination ||
+      t.destination.toLowerCase().includes(filters.destination.toLowerCase());
+
+    const matchRecipient =
+      !filters.recipient ||
+      t.recipientName.toLowerCase().includes(filters.recipient.toLowerCase());
+
+    const matchStatus = filters.status === "ALL" || t.status === filters.status;
+
+    const matchDate =
+      !filters.date ||
+      format(new Date(t.createdAt), "yyyy-MM-dd") === filters.date;
+
+    return (
+      matchSearch &&
+      matchDestination &&
+      matchRecipient &&
+      matchStatus &&
+      matchDate
+    );
+  });
 
   const getItemName = (itemId: string) => {
     return items.find((i) => i.id === itemId)?.name || "Unknown";
@@ -321,12 +354,12 @@ const OutgoingGoods: React.FC = () => {
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(33, 33, 33);
-      doc.text("NAMA PT/PERUSAHAAN DISINI", 105, 20, { align: "center" });
+      doc.text("PT SAMUDRA MARINE INDONESIA", 105, 20, { align: "center" });
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100, 100, 100);
-      doc.text("ALAMAT PT/PERUSAHAAN DISINI", 105, 28, { align: "center" });
+      doc.text("Kp. Lumalang, Desa Bojonegara, Kec. Bojonegara, Kab. Serang, Banten, Indonesia, 42454", 105, 28, { align: "center" });
 
       doc.setLineWidth(0.5);
       doc.line(20, 35, 190, 35);
@@ -709,16 +742,81 @@ const OutgoingGoods: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
+            {/* Transaction Number Search */}
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search transaction number..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Destination */}
             <Input
-              placeholder="Search transactions..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              placeholder="Filter destination..."
+              value={filters.destination}
+              onChange={(e) =>
+                setFilters({ ...filters, destination: e.target.value })
+              }
+              className="w-[200px]"
             />
+
+            {/* Recipient */}
+            <Input
+              placeholder="Filter recipient..."
+              value={filters.recipient}
+              onChange={(e) =>
+                setFilters({ ...filters, recipient: e.target.value })
+              }
+              className="w-[200px]"
+            />
+
+            {/* Status */}
+            <Select
+              value={filters.status}
+              onValueChange={(v) => setFilters({ ...filters, status: v })}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date */}
+            <Input
+              type="date"
+              value={filters.date}
+              onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+              className="w-[160px]"
+            />
+
+            {/* Clear Filters */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setFilters({
+                  destination: "",
+                  recipient: "",
+                  status: "ALL",
+                  date: "",
+                });
+              }}
+            >
+              Clear
+            </Button>
           </div>
         </CardHeader>
+
         <CardContent>
           {isLoading ? (
             <p className="text-center py-8 text-muted-foreground">Loading...</p>

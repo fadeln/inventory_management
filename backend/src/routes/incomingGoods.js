@@ -36,6 +36,7 @@ router.get("/", authenticate, async (req, res) => {
         receivedBy: {
           select: { id: true, name: true, username: true },
         },
+        createdBy: { select: { id: true, name: true } },
         items: {
           include: { item: true },
         },
@@ -73,6 +74,7 @@ router.post(
           referenceNumber,
           supplierId,
           receivedById: req.user.id,
+          createdById: req.user.id,
           receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
           notes: notes || null,
           status: "DRAFT",

@@ -90,11 +90,29 @@ const Items: React.FC = () => {
     },
   });
 
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.code.toLowerCase().includes(search.toLowerCase())
-  );
+  const [filters, setFilters] = useState({
+    categoryId: "ALL",
+    lowStockOnly: false,
+    location: "",
+  });
+
+  const filteredItems = items.filter((item) => {
+    const matchSearch =
+      item.sku.toLowerCase().includes(search.toLowerCase()) ||
+      item.name.toLowerCase().includes(search.toLowerCase());
+
+    const matchCategory =
+      filters.categoryId === "ALL" || item.categoryId === filters.categoryId;
+
+    const matchLowStock =
+      !filters.lowStockOnly || item.currentStock <= item.minStock;
+
+    const matchLocation =
+      !filters.location ||
+      item.location.toLowerCase().includes(filters.location.toLowerCase());
+
+    return matchSearch && matchCategory && matchLowStock && matchLocation;
+  });
 
   const getCategoryName = (categoryId: string) => {
     const category = categories.find((c) => c.id === categoryId);
@@ -181,18 +199,76 @@ const Items: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search items..."
+                placeholder="Search by SKU or name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
+
+            {/* Category Filter */}
+            <Select
+              value={filters.categoryId}
+              onValueChange={(v) => setFilters({ ...filters, categoryId: v })}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Location */}
+            <Input
+              placeholder="Filter location..."
+              value={filters.location}
+              onChange={(e) =>
+                setFilters({ ...filters, location: e.target.value })
+              }
+              className="w-[180px]"
+            />
+
+            {/* Low Stock Toggle */}
+            <Button
+              variant={filters.lowStockOnly ? "default" : "outline"}
+              onClick={() =>
+                setFilters({
+                  ...filters,
+                  lowStockOnly: !filters.lowStockOnly,
+                })
+              }
+            >
+              Low Stock
+            </Button>
+
+            {/* Clear */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setFilters({
+                  categoryId: "ALL",
+                  lowStockOnly: false,
+                  location: "",
+                });
+              }}
+            >
+              Clear
+            </Button>
           </div>
         </CardHeader>
+
         <CardContent>
           {isLoading ? (
             <p className="text-center py-8 text-muted-foreground">Loading...</p>
